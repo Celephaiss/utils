@@ -10,14 +10,13 @@ import (
 	"strconv"
 )
 
-type Entry struct {
-	Id int
+type Entry interface {
+	GetId() int
 }
 
 type ElasticHelper struct {
-	client    *elastic.Client
-	index     string
-	batchSize int
+	client *elastic.Client
+	index  string
 }
 
 func NewEsClient(host string, port int, user string, pass string) (*elastic.Client, error) {
@@ -63,16 +62,16 @@ func NewElasticHelper(host string, port int, user, pass string, index string, ba
 	}
 
 	return &ElasticHelper{
-		client:    client,
-		index:     index,
-		batchSize: batchSize,
+		client: client,
+		index:  index,
+		//batchSize: batchSize,
 	}, nil
 }
 
-func (es *ElasticHelper) add(ctx context.Context, entries []*Entry) error {
+func (es *ElasticHelper) add(ctx context.Context, entries []Entry) error {
 	req := es.client.Bulk().Index(es.index)
 	for _, entry := range entries {
-		doc := elastic.NewBulkIndexRequest().Id(strconv.Itoa(entry.Id)).Doc(entry)
+		doc := elastic.NewBulkIndexRequest().Id(strconv.Itoa(entry.GetId())).Doc(entry)
 		req.Add(doc)
 	}
 	if req.NumberOfActions() < 0 {
@@ -84,10 +83,10 @@ func (es *ElasticHelper) add(ctx context.Context, entries []*Entry) error {
 	return nil
 }
 
-func (es *ElasticHelper) Add(entries []*Entry) {
-	bs := es.batchSize
+func (es *ElasticHelper) Add(entries []Entry, batchSize int) {
+	bs := batchSize
 
-	var batch []*Entry
+	var batch []Entry
 
 	for {
 		if len(entries) > bs {
@@ -99,7 +98,6 @@ func (es *ElasticHelper) Add(entries []*Entry) {
 		err := es.add(context.Background(), batch)
 
 		if err != nil {
-
 			fmt.Println(err)
 		}
 	}
