@@ -83,7 +83,7 @@ func (es *ElasticHelper) add(ctx context.Context, entries []Entry) error {
 	return nil
 }
 
-func (es *ElasticHelper) Add(entries []Entry, batchSize int) {
+func (es *ElasticHelper) Add(ctx context.Context, entries []Entry, batchSize int) {
 	bs := batchSize
 
 	var batch []Entry
@@ -95,7 +95,7 @@ func (es *ElasticHelper) Add(entries []Entry, batchSize int) {
 		} else {
 			break
 		}
-		err := es.add(context.Background(), batch)
+		err := es.add(ctx, batch)
 
 		if err != nil {
 			fmt.Println(err)
@@ -103,7 +103,7 @@ func (es *ElasticHelper) Add(entries []Entry, batchSize int) {
 	}
 
 	// last batch
-	err := es.add(context.Background(), entries)
+	err := es.add(ctx, entries)
 
 	if err != nil {
 		fmt.Println(err)
