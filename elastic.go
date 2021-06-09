@@ -19,7 +19,7 @@ type ElasticHelper struct {
 	index  string
 }
 
-func NewEsClient(host string, port int, user string, pass string) (*elastic.Client, error) {
+func NewElasticHelper(host string, port int, user, pass string, index string, batchSize int) (*ElasticHelper, error) {
 
 	url := fmt.Sprintf("http://%s:%d", host, port)
 
@@ -35,7 +35,11 @@ func NewEsClient(host string, port int, user string, pass string) (*elastic.Clie
 		return nil, err
 	}
 
-	return client, nil
+	return &ElasticHelper{
+		client: client,
+		index:  index,
+		//batchSize: batchSize,
+	}, nil
 }
 
 func (es *ElasticHelper) CreateMapping(index string, mappingFile string) error {
@@ -52,20 +56,6 @@ func (es *ElasticHelper) CreateMapping(index string, mappingFile string) error {
 		return err
 	}
 	return nil
-}
-
-func NewElasticHelper(host string, port int, user, pass string, index string, batchSize int) (*ElasticHelper, error) {
-
-	client, err := NewEsClient(host, port, user, pass)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ElasticHelper{
-		client: client,
-		index:  index,
-		//batchSize: batchSize,
-	}, nil
 }
 
 func (es *ElasticHelper) add(ctx context.Context, entries []Entry) error {
