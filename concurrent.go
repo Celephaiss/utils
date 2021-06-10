@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 )
 
 type ApplyFunc = func(interface{}) interface{}
@@ -99,4 +100,56 @@ func Any(collections []interface{}, f ApplyFuncWithContext, nGoroutine int) (res
 	result = <-resultCh
 	cancel()
 	return result
+}
+
+func All(collections []interface{}, f ApplyFuncWithContext, nGoroutine int, timeout time.Duration) (result []interface{}) {
+	if nGoroutine <= 0 {
+		log.Panicf("num of goroutine less than 1")
+	}
+
+	//resultCh := make(chan *entry)
+
+	ch := make(chan *entry)
+
+	doneCh := make(chan struct{})
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(len(collections))
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+	for i := 0; i < nGoroutine; i++ {
+		go func() {
+			for {
+				entry, ok := <-ch
+				if !ok {
+					// the channel has been closed.
+					break
+				}
+
+				result[entry.i] = f(ctx, entry.arg)
+				wg.Done()
+
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		doneCh <- struct{}{}
+	}()
+
+	for i, v := range collections {
+		ch <- &entry{i, v}
+	}
+
+	select {
+	case <-time.After(timeout):
+		cancel()
+		return nil
+	case <-doneCh:
+		cancel()
+		return result
+	}
 }
